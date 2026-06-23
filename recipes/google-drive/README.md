@@ -9,8 +9,8 @@ Use this pattern when the CLI must be delivered as a shared file instead of thro
 The distributable archive is:
 
 ```text
-codenote-hello-0.1.0.zip
-├── codenote-net-hello-cli-0.1.0.tgz
+codenote-hello-<version>.zip
+├── codenote-net-hello-cli-<version>.tgz
 └── INSTALL.md
 ```
 
@@ -18,35 +18,42 @@ The zip is self-contained. A recipient can install the CLI by extracting the arc
 
 ## Build
 
+Requirements:
+
+- Node.js 22 or newer
+- npm
+- zip
+
 From the repository root, run:
 
 ```sh
-recipes/google-drive/build-distribution-zip.sh
+ZIP_PATH=$(recipes/google-drive/build-distribution-zip.sh)
+printf '%s\n' "$ZIP_PATH"
 ```
 
 The script:
 
 1. Runs `npm pack packages/hello-cli`
 2. Copies `recipes/google-drive/INSTALL.md` into the distribution directory
-3. Creates `recipes/google-drive/dist/codenote-hello-0.1.0.zip`
+3. Creates `recipes/google-drive/dist/codenote-hello-<version>.zip`
 
 To inspect the zip contents:
 
 ```sh
-unzip -l recipes/google-drive/dist/codenote-hello-0.1.0.zip
+unzip -l "$ZIP_PATH"
 ```
 
 Expected files:
 
 ```text
-codenote-net-hello-cli-0.1.0.tgz
+codenote-net-hello-cli-<version>.tgz
 INSTALL.md
 ```
 
 ## Upload to Google Drive
 
 1. Open Google Drive in a browser.
-2. Upload `recipes/google-drive/dist/codenote-hello-0.1.0.zip`.
+2. Upload the zip path printed by `recipes/google-drive/build-distribution-zip.sh`.
 3. Open the file sharing dialog.
 
 ## Share
@@ -83,7 +90,7 @@ Download by file ID:
 
 ```sh
 FILE_ID="replace-with-google-drive-file-id"
-gdown "https://drive.google.com/uc?id=${FILE_ID}" -O codenote-hello-0.1.0.zip
+gdown "https://drive.google.com/uc?id=${FILE_ID}" -O codenote-hello.zip
 ```
 
 For the email-restricted production variant, the terminal download must run under an authenticated Google account that has access to the file. Anonymous terminal downloads only work for files shared as `Anyone with the link`.
@@ -93,15 +100,15 @@ For the email-restricted production variant, the terminal download must run unde
 Extract the downloaded zip:
 
 ```sh
-unzip codenote-hello-0.1.0.zip -d codenote-hello-0.1.0
-cd codenote-hello-0.1.0
+unzip codenote-hello.zip -d codenote-hello
+cd codenote-hello
 ```
 
 Follow the bundled instructions:
 
 ```sh
 cat INSTALL.md
-npm install -g ./codenote-net-hello-cli-0.1.0.tgz
+npm install -g ./*.tgz
 codenote-hello
 ```
 
