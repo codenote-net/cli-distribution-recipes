@@ -1,0 +1,17 @@
+{
+  "name": "@codenote-net/hello-cli",
+  "version": "0.1.0",
+  "description": "Minimal sample greeting CLI for distribution recipes.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "codenote-hello": "./bin/codenote-hello.js"
+  },
+  "files": [
+    "bin/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
