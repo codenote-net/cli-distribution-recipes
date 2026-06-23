@@ -21,12 +21,14 @@ Ohayou gozaimasu, Konnichiwa, Konbanwa!
 Run the executable directly with Node:
 
 ```sh
+cd packages/hello-cli
 node bin/codenote-hello.js
 ```
 
 Or link the package locally:
 
 ```sh
+cd packages/hello-cli
 npm link
 codenote-hello
 ```
