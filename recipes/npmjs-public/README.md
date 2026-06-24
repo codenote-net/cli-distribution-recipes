@@ -65,6 +65,9 @@ Configure it with required reviewers so a human approves the publish job before 
 Recommended baseline:
 
 - Required reviewers: at least one maintainer
+- Prevent self-review: disabled for single-maintainer operation
+- Wait timer: disabled unless the repository intentionally wants a delay before publishing
+- Allow administrators to bypass configured protection rules: disabled when the environment gate is meant to be mandatory
 - Deployment branches and tags: restrict to the release process used by the repository
 - Environment name: exactly `release`
 
