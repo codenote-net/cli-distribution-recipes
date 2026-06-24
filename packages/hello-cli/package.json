@@ -9,6 +9,7 @@
     "url": "git+https://github.com/codenote-net/cli-distribution-recipes.git",
     "directory": "packages/hello-cli"
   },
+  "homepage": "https://github.com/codenote-net/cli-distribution-recipes/tree/main/packages/hello-cli#readme",
   "publishConfig": {
     "access": "public"
   },
