@@ -6,6 +6,20 @@ It prints a fixed greeting so package, signing, and distribution workflows can b
 
 ## Usage
 
+Run without installing globally:
+
+```sh
+npx @codenote-net/hello-cli
+```
+
+Or install globally:
+
+```sh
+npm install -g @codenote-net/hello-cli
+```
+
+Then run:
+
 ```sh
 codenote-hello
 ```
@@ -16,9 +30,9 @@ Output:
 Ohayou gozaimasu, Konnichiwa, Konbanwa!
 ```
 
-## Local Run
+## Repository Development
 
-Run the executable directly with Node:
+When working from a clone of `codenote-net/cli-distribution-recipes`, run the executable directly with Node:
 
 ```sh
 cd packages/hello-cli
