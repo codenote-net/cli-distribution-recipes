@@ -97,7 +97,10 @@ It uses:
 Normal release publish:
 
 ```sh
-gh release create v0.1.0 --title "v0.1.0" --notes "Publish @codenote-net/hello-cli 0.1.0"
+PACKAGE_VERSION=$(node -p 'require("./packages/hello-cli/package.json").version')
+gh release create "v${PACKAGE_VERSION}" \
+  --title "v${PACKAGE_VERSION}" \
+  --notes "Publish @codenote-net/hello-cli ${PACKAGE_VERSION}"
 ```
 
 After the workflow reaches the `release` environment gate, approve the deployment in GitHub Actions.
