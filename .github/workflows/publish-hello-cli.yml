@@ -1,0 +1,62 @@
+name: Publish hello CLI to npmjs
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      publish_mode:
+        description: "Publish directly or stage for manual approval"
+        required: true
+        default: publish
+        type: choice
+        options:
+          - publish
+          - stage
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    name: Publish @codenote-net/hello-cli
+    runs-on: ubuntu-latest
+    environment: release
+    defaults:
+      run:
+        working-directory: packages/hello-cli
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Verify npm version
+        run: |
+          npm --version
+          node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 22 || (major === 22 && minor < 14)) throw new Error("Node.js 22.14 or newer is required");'
+          node -e 'const { execFileSync } = require("node:child_process"); const version = execFileSync("npm", ["--version"], { encoding: "utf8" }).trim().split(".").map(Number); const minimum = [11, 15, 0]; for (let i = 0; i < minimum.length; i += 1) { if ((version[i] || 0) > minimum[i]) process.exit(0); if ((version[i] || 0) < minimum[i]) throw new Error("npm 11.15.0 or newer is required"); }'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify CLI output
+        run: |
+          OUTPUT=$(node bin/codenote-hello.js)
+          test "$OUTPUT" = "Ohayou gozaimasu, Konnichiwa, Konbanwa!"
+
+      - name: Publish package
+        if: ${{ github.event_name == 'release' || inputs.publish_mode == 'publish' }}
+        run: npm publish
+
+      - name: Stage package
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_mode == 'stage' }}
+        run: npm stage publish
