@@ -4,6 +4,11 @@
   "description": "Minimal sample greeting CLI for distribution recipes.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenote-net/cli-distribution-recipes.git",
+    "directory": "packages/hello-cli"
+  },
   "publishConfig": {
     "access": "public"
   },
