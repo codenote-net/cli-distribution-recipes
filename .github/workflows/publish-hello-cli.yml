@@ -1,27 +1,24 @@
 name: Publish hello CLI to npmjs
 
 on:
-  release:
+  pull_request:
     types:
-      - published
-  workflow_dispatch:
-    inputs:
-      publish_mode:
-        description: "Publish directly or stage for manual approval"
-        required: true
-        default: publish
-        type: choice
-        options:
-          - publish
-          - stage
+      - closed
+    branches:
+      - main
 
 permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: publish-hello-cli
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: Publish @codenote-net/hello-cli
+    if: "${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'Type: Release') }}"
     runs-on: ubuntu-latest
     environment: release
     defaults:
@@ -51,21 +48,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify release tag matches package version
-        if: ${{ github.event_name == 'release' }}
+      - name: Guard against republishing
         run: |
           PACKAGE_VERSION=$(node -p 'require("./package.json").version')
-          test "$GITHUB_REF" = "refs/tags/v${PACKAGE_VERSION}"
+          if npm view "@codenote-net/hello-cli@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+            echo "@codenote-net/hello-cli@${PACKAGE_VERSION} is already published"
+            exit 1
+          fi
 
       - name: Verify CLI output
         run: |
           OUTPUT=$(node bin/codenote-hello.js)
           test "$OUTPUT" = "Ohayou gozaimasu, Konnichiwa, Konbanwa!"
 
-      - name: Publish package
-        if: ${{ github.event_name == 'release' || inputs.publish_mode == 'publish' }}
-        run: npm publish
-
       - name: Stage package
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_mode == 'stage' }}
         run: npm stage publish
