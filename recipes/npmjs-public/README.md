@@ -151,7 +151,9 @@ It uses:
 
 The `Type: Release` label must exist before the workflow runs. If it is missing, the workflow fails before changing files.
 
-If a release branch or open PR already exists for the computed version, the workflow fails before pushing and asks the maintainer to merge or close the existing release PR first.
+If an open release PR already exists for the computed version, the workflow fails before pushing and asks the maintainer to merge or close it first. If only the release branch exists, the workflow asks the maintainer to delete the branch before dispatching another release.
+
+If PR creation fails after the release branch is pushed, the workflow deletes the branch when no open PR exists for it. If cleanup cannot confirm the PR state, it leaves the branch in place and prints a warning.
 
 The generated PR is not published automatically. It must still be reviewed and merged by a maintainer. The merge is what triggers `publish-hello-cli.yml`.
 

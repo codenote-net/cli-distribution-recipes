@@ -78,14 +78,14 @@ jobs:
           BRANCH_NAME="release/hello-cli-${{ steps.bump.outputs.version }}"
           echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
 
-          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null; then
-            echo "::error::Release branch ${BRANCH_NAME} already exists. Merge or close the existing release PR before dispatching another release."
-            exit 1
-          fi
-
           OPEN_PR_COUNT=$(gh pr list --head "$BRANCH_NAME" --state open --json number --jq 'length')
           if [ "$OPEN_PR_COUNT" -gt 0 ]; then
             echo "::error::An open release PR already exists for ${BRANCH_NAME}. Merge or close it before dispatching another release."
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null; then
+            echo "::error::Release branch ${BRANCH_NAME} already exists without an open PR. Delete the branch before dispatching another release."
             exit 1
           fi
 
@@ -104,9 +104,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          cleanup_release_branch() {
+            if OPEN_PR_COUNT=$(gh pr list --head "$BRANCH_NAME" --state open --json number --jq 'length'); then
+              if [ "$OPEN_PR_COUNT" -eq 0 ]; then
+                git push origin --delete "$BRANCH_NAME" || true
+              fi
+            else
+              echo "::warning::Could not check for an open PR after PR creation failed. Leaving ${BRANCH_NAME} in place."
+            fi
+          }
+
+          trap cleanup_release_branch ERR
+
           gh pr create \
             --base main \
             --head "$BRANCH_NAME" \
             --title "Bump hello CLI to ${{ steps.bump.outputs.version }}" \
             --body "Bump @codenote-net/hello-cli to ${{ steps.bump.outputs.version }} for staged npm publishing." \
             --label "Type: Release"
+
+          trap - ERR
