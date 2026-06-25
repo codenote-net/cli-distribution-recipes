@@ -78,6 +78,14 @@ The environment name must match both the workflow and the npm Trusted Publisher 
 
 GitHub evaluates Environment branch protection rules for `pull_request` events against the executing pull request merge ref, `refs/pull/<number>/merge`. The `refs/pull/*/merge` restriction allows the PR-merge release path while blocking direct pushes, feature branches, and manual dispatches from accessing the `release` environment.
 
+### Environment Branch Rule Validation
+
+This recipe intentionally uses `refs/pull/*/merge` for the `release` Environment branch restriction because GitHub evaluates Environment branch protection rules for `pull_request` events against the executing pull request merge ref.
+
+The first release PR should verify that a merged PR with the `Type: Release` label reaches the `release` Environment approval gate and can run `npm stage publish`.
+
+If GitHub changes this behavior or the deployment is rejected by the Environment branch rule, switch the implementation to a `push` on `main` trigger with a preflight job that validates the merged PR metadata before entering the protected environment.
+
 ## Publish Workflow
 
 The workflow lives at:
