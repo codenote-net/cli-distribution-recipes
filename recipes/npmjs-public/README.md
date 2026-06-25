@@ -71,12 +71,12 @@ Configure it with protection rules:
 - Prevent self-review: disabled for single-maintainer operation.
 - Wait timer: disabled unless the repository intentionally wants a delay before staging.
 - Allow administrators to bypass configured protection rules: disabled.
-- Deployment branches and tags: allow only `refs/pull/*/merge`.
+- Deployment branches and tags: allow only `refs/heads/main`.
 - Environment name: exactly `release`.
 
 The environment name must match both the workflow and the npm Trusted Publisher configuration.
 
-The `refs/pull/*/merge` deployment restriction makes the PR-merge boundary effective. It blocks direct pushes, feature branches, and manual dispatches from accessing the `release` environment.
+This workflow runs after a release PR is merged, so GitHub evaluates the deployment against `refs/heads/main`, not `refs/pull/*/merge`. Direct pushes still do not trigger this publish path because the workflow only listens to `pull_request.closed` and the job also requires a merged PR with the `Type: Release` label.
 
 ## Publish Workflow
 
@@ -157,7 +157,7 @@ This model requires several independent boundaries before a live npm package exi
 - the PR receives source review
 - the PR has the `Type: Release` label
 - the PR is merged to `main`
-- the deployment targets the protected `release` Environment through the PR merge ref
+- the deployment targets the protected `release` Environment from `refs/heads/main` after the PR merge
 - a maintainer approves the environment deployment
 - npm Trusted Publishing accepts the OIDC exchange
 - npm receives only `npm stage publish`
