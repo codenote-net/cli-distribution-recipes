@@ -128,7 +128,7 @@ The release PR creation workflow lives at:
 .github/workflows/create-release-pr.yml
 ```
 
-Run it from GitHub Actions with a `release_type` input:
+Run it from GitHub Actions on `main` with a `release_type` input:
 
 ```text
 patch
@@ -136,24 +136,17 @@ minor
 major
 ```
 
-It uses:
-
-- `workflow_dispatch`
-- `permissions: contents: write, pull-requests: write`
-- GitHub-hosted `ubuntu-latest`
-- checkout fixed to `main`
-- pinned `actions/checkout` and `actions/setup-node` commit SHAs
-- `package-manager-cache: false`
-- `npm version <release_type> --no-git-tag-version` in `packages/hello-cli`
-- an early npm registry check for the computed version
-- a same-repository branch named `release/hello-cli-<version>`
-- a PR labeled `Type: Release`
+The workflow checks that the `Type: Release` label exists, bumps `packages/hello-cli` with `npm version <release_type> --no-git-tag-version`, pushes a same-repository branch named `release/hello-cli-<version>`, and opens a PR labeled `Type: Release`.
 
 The `Type: Release` label must exist before the workflow runs. If it is missing, the workflow fails before changing files.
 
 If an open release PR already exists for the computed version, the workflow fails before pushing and asks the maintainer to merge or close it first. If only the release branch exists, the workflow asks the maintainer to delete the branch before dispatching another release.
 
-If PR creation fails after the release branch is pushed, the workflow deletes the branch when no open PR exists for it. If cleanup cannot confirm the PR state, it leaves the branch in place and prints a warning.
+If PR creation fails after the release branch is pushed, the branch is left in place intentionally. Delete it manually after confirming no PR was created:
+
+```sh
+git push origin --delete release/hello-cli-<version>
+```
 
 The generated PR is not published automatically. It must still be reviewed and merged by a maintainer. The merge is what triggers `publish-hello-cli.yml`.
 

@@ -50,7 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh label list --search "Type: Release" --json name --jq '.[].name' | grep -Fx "Type: Release"
+          gh label view "Type: Release" --json name --jq '.name' | grep -Fx "Type: Release"
 
       - name: Bump package version
         id: bump
@@ -58,17 +58,6 @@ jobs:
           npm version "${{ inputs.release_type }}" --no-git-tag-version
           VERSION=$(node -p 'require("./package.json").version')
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-        working-directory: packages/hello-cli
-
-      - name: Check npm registry version
-        run: |
-          PACKAGE_NAME=$(node -p 'require("./package.json").name')
-          VERSION="${{ steps.bump.outputs.version }}"
-
-          if npm view "${PACKAGE_NAME}@${VERSION}" version --registry=https://registry.npmjs.org/ >/dev/null 2>&1; then
-            echo "::error::${PACKAGE_NAME}@${VERSION} already exists on npm. Choose a higher release type or update main before creating a release PR."
-            exit 1
-          fi
         working-directory: packages/hello-cli
 
       - name: Check for existing release PR
@@ -104,23 +93,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cleanup_release_branch() {
-            if OPEN_PR_COUNT=$(gh pr list --head "$BRANCH_NAME" --state open --json number --jq 'length'); then
-              if [ "$OPEN_PR_COUNT" -eq 0 ]; then
-                git push origin --delete "$BRANCH_NAME" || true
-              fi
-            else
-              echo "::warning::Could not check for an open PR after PR creation failed. Leaving ${BRANCH_NAME} in place."
-            fi
-          }
-
-          trap cleanup_release_branch ERR
-
           gh pr create \
             --base main \
             --head "$BRANCH_NAME" \
             --title "Bump hello CLI to ${{ steps.bump.outputs.version }}" \
             --body "Bump @codenote-net/hello-cli to ${{ steps.bump.outputs.version }} for staged npm publishing." \
             --label "Type: Release"
-
-          trap - ERR
