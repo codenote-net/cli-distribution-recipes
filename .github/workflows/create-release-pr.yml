@@ -50,7 +50,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh label view "Type: Release" --json name --jq '.name' | grep -Fx "Type: Release"
+          LABEL_NAME=$(node -e 'console.log(encodeURIComponent("Type: Release"))')
+          gh api "repos/${GITHUB_REPOSITORY}/labels/${LABEL_NAME}" --jq '.name' | grep -Fx "Type: Release"
 
       - name: Bump package version
         id: bump
