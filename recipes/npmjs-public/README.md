@@ -44,7 +44,7 @@ Organization or user: codenote-net
 Repository: cli-distribution-recipes
 Workflow filename: publish-hello-cli.yml
 Environment name: release
-Allowed actions: npm publish, npm stage publish
+Allowed actions: npm stage publish
 ```
 
 Then open Settings -> Publishing access and select:
@@ -54,6 +54,8 @@ Require two-factor authentication and disallow tokens
 ```
 
 This keeps long-lived npm publish tokens out of the repository and organization secrets. There should be no `NPM_TOKEN` secret for this publish path.
+
+Do not grant `npm publish` to this Trusted Publisher. This recipe is intentionally stage-only so a workflow change cannot use OIDC to push a live package without the separate npm staged-package approval step.
 
 ## One-Time GitHub Setup
 
