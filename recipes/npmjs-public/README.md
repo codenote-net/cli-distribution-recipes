@@ -2,11 +2,13 @@
 
 This recipe publishes `@codenote-net/hello-cli` to the public npmjs.com registry from GitHub Actions using npm Trusted Publishing.
 
+The implemented release model is PR-merge based and staged by default. GitHub repository write access alone must not be enough to push a live package to npm. CI can only stage a package; live promotion is a separate maintainer action that requires npm MFA.
+
 Trusted Publishing uses GitHub Actions OIDC instead of a long-lived `NPM_TOKEN`. For a public repository and public package, npm also generates provenance automatically when the package is published through Trusted Publishing.
 
 ## Published Result
 
-After the package is published, users can run:
+After the staged package is approved and promoted, users can run:
 
 ```sh
 npx @codenote-net/hello-cli
@@ -26,6 +28,7 @@ Ohayou gozaimasu, Konnichiwa, Konbanwa!
 - The GitHub repository is public so npm can attach provenance.
 - The release workflow runs on a GitHub-hosted runner.
 - Node.js 22.14 or newer and npm 11.15.0 or newer are used in the publish job.
+- Release PRs are opened from same-repository branches, not forks, so GitHub Actions can receive `id-token: write`.
 
 ## One-Time npm Setup
 
@@ -60,18 +63,18 @@ Create a GitHub Deployment Environment named:
 release
 ```
 
-Configure it with required reviewers so a human approves the publish job before it receives the environment.
+Configure it with protection rules:
 
-Recommended baseline:
-
-- Required reviewers: at least one maintainer
-- Prevent self-review: disabled for single-maintainer operation
-- Wait timer: disabled unless the repository intentionally wants a delay before publishing
-- Allow administrators to bypass configured protection rules: disabled when the environment gate is meant to be mandatory
-- Deployment branches and tags: restrict to the release process used by the repository
-- Environment name: exactly `release`
+- Required reviewers: at least one maintainer.
+- Prevent self-review: disabled for single-maintainer operation.
+- Wait timer: disabled unless the repository intentionally wants a delay before staging.
+- Allow administrators to bypass configured protection rules: disabled.
+- Deployment branches and tags: allow only `refs/pull/*/merge`.
+- Environment name: exactly `release`.
 
 The environment name must match both the workflow and the npm Trusted Publisher configuration.
+
+The `refs/pull/*/merge` deployment restriction makes the PR-merge boundary effective. It blocks direct pushes, feature branches, and manual dispatches from accessing the `release` environment.
 
 ## Publish Workflow
 
@@ -83,81 +86,100 @@ The workflow lives at:
 
 It uses:
 
-- `release: published` for normal release publishing
-- `workflow_dispatch` for manual testing or staged publishing
+- `pull_request.closed` on `main`
+- job-level filtering for merged PRs with the `Type: Release` label
 - `permissions: id-token: write, contents: read`
+- `concurrency.group: publish-hello-cli`
 - GitHub-hosted `ubuntu-latest`
 - protected environment `release`
 - Node.js 24 with npm 11.15.0 or newer
 - pinned `actions/checkout` and `actions/setup-node` commit SHAs
 - `package-manager-cache: false`
 - `npm ci`
-- CLI output verification before publishing
+- a guard that fails if the package version already exists on npm
+- CLI output verification before staging
+- `npm stage publish`
 
-Normal release publish:
+The workflow does not run `npm publish`. CI only stages the package.
 
-```sh
-PACKAGE_VERSION=$(node -p 'require("./packages/hello-cli/package.json").version')
-gh release create "v${PACKAGE_VERSION}" \
-  --title "v${PACKAGE_VERSION}" \
-  --notes "Publish @codenote-net/hello-cli ${PACKAGE_VERSION}"
-```
+## Manual Release Flow
 
-After the workflow reaches the `release` environment gate, approve the deployment in GitHub Actions.
+1. Create a same-repository branch.
+2. Manually bump `packages/hello-cli/package.json` and `packages/hello-cli/package-lock.json`.
+3. Open a PR to `main`.
+4. Apply the `Type: Release` label by hand.
+5. Review and merge the PR.
+6. Approve the GitHub `release` Environment deployment.
+7. Let CI run `npm stage publish`.
+8. Inspect the staged package.
+9. Approve the staged package with hardware MFA to promote it live.
+
+Release PRs must come from same-repository branches. Fork-originated `pull_request` runs do not receive `id-token: write`, so OIDC Trusted Publishing will fail.
+
+Automated release PR creation, such as a future `create-release-pr.yml`, is intentionally out of scope for this recipe and tracked separately.
+
+## Why This Is Hardened
+
+This model requires several independent boundaries before a live npm package exists:
+
+- a maintainer creates a version-bump PR
+- the PR receives source review
+- the PR has the `Type: Release` label
+- the PR is merged to `main`
+- the deployment targets the protected `release` Environment through the PR merge ref
+- a maintainer approves the environment deployment
+- npm Trusted Publishing accepts the OIDC exchange
+- npm receives only `npm stage publish`
+- a maintainer separately approves the staged package with MFA
+
+Modifying the workflow file alone cannot push a live package. A workflow modification must still pass PR review, merge through the protected PR path, receive environment approval, and then only stages the package. Live promotion remains outside CI and requires npm-side MFA.
+
+This defends against workflow-modification plus OIDC-exfiltration attack classes by preventing repository write access from directly producing a live npm release.
 
 ## Staged Publishing Gate
 
-For an additional human approval step before the package becomes live, run the workflow manually with:
-
-```text
-publish_mode: stage
-```
-
-The workflow runs:
-
-```sh
-npm stage publish
-```
-
-After the package is staged, inspect it from an authenticated maintainer machine:
+After the workflow stages a package, inspect it from an authenticated maintainer machine:
 
 ```sh
 npm stage list @codenote-net/hello-cli
-npm stage view <stage-id>
-npm stage download <stage-id>
+npm stage view <id>
+npm stage download <id>
 ```
 
-Approve it with MFA:
+Approve it with hardware MFA:
 
 ```sh
-npm stage approve <stage-id>
+npm stage approve <id>
 ```
 
-You can also review and approve staged packages from the npmjs.com Staged Packages tab. Approval requires proof of presence with 2FA. Staged publishing works well for this single-package recipe, but per-package approval does not batch cleanly in larger monorepos.
+Reject it if anything is wrong:
 
-## Hardened Variant: PR-Merge Based Release
+```sh
+npm stage reject <id>
+```
 
-For a stronger multi-boundary release design:
-
-1. Create a version bump PR.
-2. Review and merge the PR.
-3. Trigger the publish job only from the reviewed PR pathway.
-4. Protect the `release` Environment with required reviewers.
-5. Restrict deployment branches to GitHub's merge refs, such as `refs/pull/*/merge`, when that release model is used.
-6. Publish directly with `npm publish`, or stage with `npm stage publish` and approve with MFA.
-
-This design forces a publish to cross several independent boundaries: repository write access, reviewed source changes, environment approval, OIDC Trusted Publishing, and optional npm staged-publish approval.
+You can also review and approve staged packages from the npmjs.com Staged Packages tab. Staged publishing works well for this single-package recipe, but per-package approval does not batch cleanly in larger monorepos.
 
 ## Verify
 
-After publishing, verify the package metadata:
+Before `npm stage approve`, the package is staged but not live. It is not installable with `npx` or `npm install -g` until promotion.
+
+Inspect the staged package first:
+
+```sh
+npm stage list @codenote-net/hello-cli
+npm stage view <id>
+npm stage download <id>
+```
+
+After approving the staged package, verify the live package metadata:
 
 ```sh
 npm view @codenote-net/hello-cli version
 npm view @codenote-net/hello-cli dist
 ```
 
-Verify install paths:
+Verify install paths after live promotion:
 
 ```sh
 npx @codenote-net/hello-cli
@@ -206,3 +228,4 @@ codenote-net/cli-distribution-recipes
 - npm Docs: Trusted publishing for npm packages: https://docs.npmjs.com/trusted-publishers/
 - npm Docs: Generating provenance statements: https://docs.npmjs.com/generating-provenance-statements/
 - npm Docs: Staged publishing for npm packages: https://docs.npmjs.com/staged-publishing/
+- Hardening npm publishing: https://azu.github.io/slide/2026/hardening-npm-publishing/slide.html
