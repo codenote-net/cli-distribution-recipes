@@ -140,7 +140,7 @@ The workflow checks that the `Type: Release` label exists, bumps `packages/hello
 
 The `Type: Release` label must exist before the workflow runs. If it is missing, the workflow fails before changing files.
 
-If an open release PR already exists for the computed version, the workflow fails before pushing and asks the maintainer to merge or close it first. If only the release branch exists, the workflow asks the maintainer to delete the branch before dispatching another release.
+If any open `Type: Release` PR already exists, the workflow fails before pushing and asks the maintainer to merge or close it first. If only the computed release branch exists, the workflow asks the maintainer to delete the branch before dispatching another release.
 
 If PR creation fails after the release branch is pushed, the branch is left in place intentionally. Delete it manually after confirming no PR was created:
 
@@ -199,7 +199,7 @@ flowchart TD
 
 This model requires several independent boundaries before a live npm package exists:
 
-- a maintainer creates a version-bump PR
+- a maintainer dispatches the release workflow, which creates a version-bump PR
 - the PR receives source review
 - the PR has the `Type: Release` label
 - the PR is merged to `main`

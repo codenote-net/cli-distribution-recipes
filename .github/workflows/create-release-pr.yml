@@ -68,6 +68,12 @@ jobs:
           BRANCH_NAME="release/hello-cli-${{ steps.bump.outputs.version }}"
           echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
 
+          OPEN_RELEASE_PR_COUNT=$(gh pr list --base main --label "Type: Release" --state open --json number --jq 'length')
+          if [ "$OPEN_RELEASE_PR_COUNT" -gt 0 ]; then
+            echo "::error::An open Type: Release PR already exists. Merge or close it before dispatching another release."
+            exit 1
+          fi
+
           OPEN_PR_COUNT=$(gh pr list --head "$BRANCH_NAME" --state open --json number --jq 'length')
           if [ "$OPEN_PR_COUNT" -gt 0 ]; then
             echo "::error::An open release PR already exists for ${BRANCH_NAME}. Merge or close it before dispatching another release."
