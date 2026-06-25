@@ -76,6 +76,12 @@ Configure it with protection rules:
 
 The environment name must match both the workflow and the npm Trusted Publisher configuration.
 
+Create the release label if it does not already exist:
+
+```sh
+gh label create "Type: Release" --color "0e8a16" --description "Release PR"
+```
+
 GitHub evaluates Environment branch protection rules for `pull_request` events against the executing pull request merge ref, `refs/pull/<number>/merge`. The `refs/pull/*/merge` restriction allows the PR-merge release path while blocking direct pushes, feature branches, and manual dispatches from accessing the `release` environment.
 
 ### Environment Branch Rule Validation
@@ -114,7 +120,40 @@ It uses:
 
 The workflow does not run `npm publish`. CI only stages the package.
 
-## Manual Release Flow
+## Automated Release PR Creation
+
+The release PR creation workflow lives at:
+
+```text
+.github/workflows/create-release-pr.yml
+```
+
+Run it from GitHub Actions with a `release_type` input:
+
+```text
+patch
+minor
+major
+```
+
+It uses:
+
+- `workflow_dispatch`
+- `permissions: contents: write, pull-requests: write`
+- GitHub-hosted `ubuntu-latest`
+- pinned `actions/checkout` and `actions/setup-node` commit SHAs
+- `package-manager-cache: false`
+- `npm version <release_type> --no-git-tag-version` in `packages/hello-cli`
+- a same-repository branch named `release/hello-cli-<version>`
+- a PR labeled `Type: Release`
+
+The `Type: Release` label must exist before the workflow runs. If it is missing, the workflow fails before changing files.
+
+The generated PR is not published automatically. It must still be reviewed and merged by a maintainer. The merge is what triggers `publish-hello-cli.yml`.
+
+## Manual Release PR Creation
+
+Use this fallback if the automated release PR workflow is unavailable:
 
 1. Create a same-repository branch.
 2. Manually bump `packages/hello-cli/package.json` and `packages/hello-cli/package-lock.json`.
@@ -128,14 +167,12 @@ The workflow does not run `npm publish`. CI only stages the package.
 
 Release PRs must come from same-repository branches. Fork-originated `pull_request` runs do not receive `id-token: write`, so OIDC Trusted Publishing will fail.
 
-Automated release PR creation, such as a future `create-release-pr.yml`, is intentionally out of scope for this recipe and tracked separately.
-
 ## Operations Flow
 
 ```mermaid
 flowchart TD
-  A["Maintainer manually bumps package version"] --> B["Open same-repository PR"]
-  B --> C["Apply Type: Release label"]
+  A["Maintainer runs create-release-pr workflow"] --> B["Workflow bumps package version"]
+  B --> C["Workflow opens same-repository PR labeled Type: Release"]
   C --> D["Human review"]
   D --> E["Merge PR to main"]
   E --> F["publish-hello-cli workflow starts on pull_request.closed"]
