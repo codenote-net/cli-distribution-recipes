@@ -139,12 +139,13 @@ major
 It uses:
 
 - `workflow_dispatch`
-- `permissions: contents: write, issues: write, pull-requests: write`
+- `permissions: contents: write, pull-requests: write`
 - GitHub-hosted `ubuntu-latest`
 - checkout fixed to `main`
 - pinned `actions/checkout` and `actions/setup-node` commit SHAs
 - `package-manager-cache: false`
 - `npm version <release_type> --no-git-tag-version` in `packages/hello-cli`
+- an early npm registry check for the computed version
 - a same-repository branch named `release/hello-cli-<version>`
 - a PR labeled `Type: Release`
 
