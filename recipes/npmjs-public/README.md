@@ -76,6 +76,11 @@ Configure it with protection rules:
 
 The environment name must match both the workflow and the npm Trusted Publisher configuration.
 
+Enable GitHub Actions to open release PRs:
+
+1. Open **Settings > Actions > General**.
+2. Under **Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**.
+
 Create the release label if it does not already exist:
 
 ```sh
