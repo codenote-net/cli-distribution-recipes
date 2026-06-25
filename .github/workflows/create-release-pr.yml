@@ -1,0 +1,79 @@
+name: Create hello CLI release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Version bump type"
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: create-hello-cli-release-pr
+  cancel-in-progress: false
+
+jobs:
+  create-release-pr:
+    name: Create @codenote-net/hello-cli release PR
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Verify release label exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label list --search "Type: Release" --json name --jq '.[].name' | grep -Fx "Type: Release"
+
+      - name: Bump package version
+        id: bump
+        run: |
+          npm version "${{ inputs.release_type }}" --no-git-tag-version
+          VERSION=$(node -p 'require("./package.json").version')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        working-directory: packages/hello-cli
+
+      - name: Create release branch
+        run: |
+          BRANCH_NAME="release/hello-cli-${{ steps.bump.outputs.version }}"
+          git checkout -b "$BRANCH_NAME"
+          git add packages/hello-cli/package.json packages/hello-cli/package-lock.json
+          git commit -m "Bump hello CLI to ${{ steps.bump.outputs.version }}"
+          git push origin "$BRANCH_NAME"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+
+      - name: Open release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --title "Bump hello CLI to ${{ steps.bump.outputs.version }}" \
+            --body "Bump @codenote-net/hello-cli to ${{ steps.bump.outputs.version }} for staged npm publishing." \
+            --label "Type: Release"
