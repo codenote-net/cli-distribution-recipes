@@ -1,0 +1,65 @@
+name: Publish hello CLI to npmjs
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: publish-hello-cli
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish @codenote-net/hello-cli
+    if: "${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'Type: Release') }}"
+    runs-on: ubuntu-latest
+    environment: release
+    defaults:
+      run:
+        working-directory: packages/hello-cli
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Install required npm CLI
+        run: npm install -g npm@11.15.0
+
+      - name: Verify npm version
+        run: |
+          npm --version
+          node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 22 || (major === 22 && minor < 14)) throw new Error("Node.js 22.14 or newer is required");'
+          node -e 'const { execFileSync } = require("node:child_process"); const version = execFileSync("npm", ["--version"], { encoding: "utf8" }).trim().split(".").map(Number); const minimum = [11, 15, 0]; for (let i = 0; i < minimum.length; i += 1) { if ((version[i] || 0) > minimum[i]) process.exit(0); if ((version[i] || 0) < minimum[i]) throw new Error("npm 11.15.0 or newer is required"); }'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Guard against republishing
+        run: |
+          PACKAGE_VERSION=$(node -p 'require("./package.json").version')
+          if npm view "@codenote-net/hello-cli@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+            echo "@codenote-net/hello-cli@${PACKAGE_VERSION} is already published"
+            exit 1
+          fi
+
+      - name: Verify CLI output
+        run: |
+          OUTPUT=$(node bin/codenote-hello.js)
+          test "$OUTPUT" = "Ohayou gozaimasu, Konnichiwa, Konbanwa!"
+
+      - name: Stage package
+        run: npm stage publish

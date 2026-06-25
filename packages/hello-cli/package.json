@@ -1,9 +1,15 @@
 {
   "name": "@codenote-net/hello-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Minimal sample greeting CLI for distribution recipes.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenote-net/cli-distribution-recipes.git",
+    "directory": "packages/hello-cli"
+  },
+  "homepage": "https://github.com/codenote-net/cli-distribution-recipes/tree/main/packages/hello-cli#readme",
   "publishConfig": {
     "access": "public"
   },
