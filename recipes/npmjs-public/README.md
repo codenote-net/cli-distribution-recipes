@@ -82,7 +82,9 @@ GitHub evaluates Environment branch protection rules for `pull_request` events a
 
 This recipe intentionally uses `refs/pull/*/merge` for the `release` Environment branch restriction because GitHub evaluates Environment branch protection rules for `pull_request` events against the executing pull request merge ref.
 
-The first release PR should verify that a merged PR with the `Type: Release` label reaches the `release` Environment approval gate and can run `npm stage publish`.
+This behavior was validated with the `@codenote-net/hello-cli@0.1.2` release PR. A same-repository PR labeled `Type: Release` was merged, the workflow reached the `release` Environment approval gate, and `npm stage publish` completed successfully after deployment approval.
+
+The staged package was then inspected, approved with npm staged publishing, promoted live, and verified with `npm view` and `npx`. The validation result is recorded in issue #5: https://github.com/codenote-net/cli-distribution-recipes/issues/5#issuecomment-4799673668
 
 If GitHub changes this behavior or the deployment is rejected by the Environment branch rule, switch the implementation to a `push` on `main` trigger with a preflight job that validates the merged PR metadata before entering the protected environment.
 
