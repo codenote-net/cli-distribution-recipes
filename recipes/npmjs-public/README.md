@@ -120,6 +120,35 @@ Release PRs must come from same-repository branches. Fork-originated `pull_reque
 
 Automated release PR creation, such as a future `create-release-pr.yml`, is intentionally out of scope for this recipe and tracked separately.
 
+## Operations Flow
+
+```mermaid
+flowchart TD
+  A["Maintainer manually bumps package version"] --> B["Open same-repository PR"]
+  B --> C["Apply Type: Release label"]
+  C --> D["Human review"]
+  D --> E["Merge PR to main"]
+  E --> F["publish-hello-cli workflow starts on pull_request.closed"]
+  F --> G{"Merged and labeled Type: Release?"}
+  G -- "No" --> H["Job is skipped"]
+  G -- "Yes" --> I["Request release environment"]
+  I --> J["Maintainer approves GitHub environment deployment"]
+  J --> K["GitHub OIDC token issued"]
+  K --> L["npm Trusted Publishing validates repo, workflow, and environment"]
+  L --> M["npm ci"]
+  M --> N{"Version already exists on npm?"}
+  N -- "Yes" --> O["Fail before staging"]
+  N -- "No" --> P["Verify CLI output"]
+  P --> Q["npm stage publish"]
+  Q --> R["Package is staged, not live"]
+  R --> S["Maintainer inspects staged package"]
+  S --> T{"Approve with npm MFA?"}
+  T -- "Reject" --> U["npm stage reject"]
+  T -- "Approve" --> V["npm stage approve"]
+  V --> W["Package becomes live on npm"]
+  W --> X["Verify npm view, npx, and provenance"]
+```
+
 ## Why This Is Hardened
 
 This model requires several independent boundaries before a live npm package exists:
