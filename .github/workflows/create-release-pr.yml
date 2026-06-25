@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 concurrency:
@@ -32,6 +33,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          ref: main
 
       - name: Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
@@ -58,14 +61,34 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
         working-directory: packages/hello-cli
 
-      - name: Create release branch
+      - name: Check for existing release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           BRANCH_NAME="release/hello-cli-${{ steps.bump.outputs.version }}"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null; then
+            echo "::error::Release branch ${BRANCH_NAME} already exists. Merge or close the existing release PR before dispatching another release."
+            exit 1
+          fi
+
+          OPEN_PR_COUNT=$(gh pr list --head "$BRANCH_NAME" --state open --json number --jq 'length')
+          if [ "$OPEN_PR_COUNT" -gt 0 ]; then
+            echo "::error::An open release PR already exists for ${BRANCH_NAME}. Merge or close it before dispatching another release."
+            exit 1
+          fi
+
+      - name: Create release branch
+        run: |
           git checkout -b "$BRANCH_NAME"
           git add packages/hello-cli/package.json packages/hello-cli/package-lock.json
+          if git diff --cached --quiet; then
+            echo "::error::No package version changes were staged for ${{ steps.bump.outputs.version }}."
+            exit 1
+          fi
           git commit -m "Bump hello CLI to ${{ steps.bump.outputs.version }}"
           git push origin "$BRANCH_NAME"
-          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
 
       - name: Open release PR
         env:

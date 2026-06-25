@@ -139,8 +139,9 @@ major
 It uses:
 
 - `workflow_dispatch`
-- `permissions: contents: write, pull-requests: write`
+- `permissions: contents: write, issues: write, pull-requests: write`
 - GitHub-hosted `ubuntu-latest`
+- checkout fixed to `main`
 - pinned `actions/checkout` and `actions/setup-node` commit SHAs
 - `package-manager-cache: false`
 - `npm version <release_type> --no-git-tag-version` in `packages/hello-cli`
@@ -148,6 +149,8 @@ It uses:
 - a PR labeled `Type: Release`
 
 The `Type: Release` label must exist before the workflow runs. If it is missing, the workflow fails before changing files.
+
+If a release branch or open PR already exists for the computed version, the workflow fails before pushing and asks the maintainer to merge or close the existing release PR first.
 
 The generated PR is not published automatically. It must still be reviewed and merged by a maintainer. The merge is what triggers `publish-hello-cli.yml`.
 
