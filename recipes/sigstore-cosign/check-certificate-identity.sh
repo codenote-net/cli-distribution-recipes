@@ -26,7 +26,8 @@ for file in $CHECK_FILES; do
 done
 
 FOUND_IDENTITIES=$(
-  grep -Eho 'https://github\.com/codenote-net/cli-distribution-recipes/\.github/workflows/[^" ]+@refs/heads/[^" ]+' $CHECK_FILES "$WORKFLOW_FILE" |
+  grep -Eho 'https://github\.com/[^" <>`]+/\.github/workflows/[^" <>`]+@refs/(heads|tags)/[^" <>`]+' $CHECK_FILES "$WORKFLOW_FILE" |
+    sed 's/[.,;:)]$//' |
     sort -u
 )
 

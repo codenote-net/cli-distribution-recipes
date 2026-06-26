@@ -53,9 +53,10 @@ fi
 NPM_CONFIG_CACHE="$NPM_CONFIG_CACHE" "$REPO_ROOT/recipes/sigstore-cosign/build-artifacts.sh" "$WORK_DIR" >/dev/null
 cd "$WORK_DIR"
 
-artifact_count=$(find . -maxdepth 1 \( -name '*.tgz' -o -name '*.zip' \) -type f | wc -l | tr -d ' ')
-if [ "$artifact_count" -ne 2 ]; then
-  printf 'Expected exactly two artifacts in %s: one .tgz and one .zip.\n' "$WORK_DIR" >&2
+tgz_count=$(find . -maxdepth 1 -name '*.tgz' -type f | wc -l | tr -d ' ')
+zip_count=$(find . -maxdepth 1 -name '*.zip' -type f | wc -l | tr -d ' ')
+if [ "$tgz_count" -ne 1 ] || [ "$zip_count" -ne 1 ]; then
+  printf 'Expected exactly one .tgz and one .zip artifact in %s.\n' "$WORK_DIR" >&2
   find . -maxdepth 1 -type f -print >&2
   exit 1
 fi
