@@ -26,9 +26,10 @@ codenote-net-hello-cli-<version>.tgz.sha256
 codenote-hello-<version>.zip
 codenote-hello-<version>.zip.bundle
 codenote-hello-<version>.zip.sha256
+VERIFY.md
 ```
 
-The `.bundle` files contain the cosign signature material needed by `cosign verify-blob`. The `.sha256` files are a minimal integrity fallback for environments that cannot install cosign.
+The `.bundle` files contain the cosign signature material needed by `cosign verify-blob`. The `.sha256` files are a minimal integrity fallback for environments that cannot install cosign. `VERIFY.md` is the consumer-facing verification guide for the signed Google Drive distribution set.
 
 ## Signing Flow
 
@@ -42,7 +43,7 @@ The workflow:
 6. Runs `cosign sign-blob --bundle` for each artifact.
 7. Verifies the untouched artifacts with the pinned GitHub Actions identity and issuer.
 8. Modifies a copy of each artifact and confirms verification fails.
-9. Uploads the artifacts, bundles, and checksums.
+9. Uploads the artifacts, bundles, checksums, and Google Drive verification guide.
 
 The workflow grants only:
 

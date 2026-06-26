@@ -20,10 +20,11 @@ Because the artifact never changes, any difference you see between recipes comes
 |---|---|---|---|---|---|---|---|
 | npmjs public | Public registry | OIDC Trusted Publishing (tokenless) | npm provenance (auto) | Yes — provenance attestation + transparency log | Public distribution | ✅ Done | [recipes/npmjs-public/](recipes/npmjs-public/README.md) |
 | Google Drive | Out-of-band | Shared link / per-account share | None yet (add checksum or signature separately) | No | Individual / internal | ✅ Done | [recipes/google-drive/](recipes/google-drive/README.md) |
+| Google Drive with cosign | Out-of-band | Shared link / per-account share + GitHub Actions OIDC signing | cosign bundle + SHA-256 | Yes — transparency log-backed keyless signature | Individual / internal | ✅ Done | [recipes/google-drive-with-cosign/](recipes/google-drive-with-cosign/README.md) |
 | AWS CodeArtifact | Private registry | Short-lived token / IAM | TBD | Partial — registry access logs | Internal | 📋 Planned | — |
 | Azure Artifacts | Private registry | Short-lived token / Entra ID | TBD | Partial — registry access logs | Internal | 📋 Planned | — |
 | Google Cloud Artifact Registry | Private registry | Short-lived token / IAM | TBD | Partial — registry access logs | Internal | 📋 Planned | — |
-| Sigstore cosign | Signing | OIDC (keyless) | cosign signature | Yes — Rekor transparency log | Public distribution | 📋 Planned | — |
+| Sigstore cosign | Signing | OIDC (keyless) | cosign bundle + SHA-256 | Yes — transparency log-backed keyless signature | Public distribution | ✅ Done | [recipes/sigstore-cosign/](recipes/sigstore-cosign/README.md) |
 | Code signing: macOS notarization | Signing | Apple Developer ID | OS code signing + notarization | Partial — Apple notarization ticket | Public distribution | 📋 Planned | — |
 | Code signing: Windows Authenticode | Signing | Code signing certificate | OS code signing | Partial — timestamping authority | Public distribution | 📋 Planned | — |
 | Jamf (macOS MDM) | MDM | MDM enrollment | OS code signing (via packaged artifact) | Yes — MDM deployment records | Internal | 📋 Planned | — |
@@ -63,6 +64,9 @@ packages/
 recipes/
   npmjs-public/     Public npmjs.com publishing via OIDC Trusted Publishing
   google-drive/     Out-of-band distribution via a Google Drive share link
+  google-drive-with-cosign/
+                    Google Drive distribution with cosign verification files
+  sigstore-cosign/  Keyless cosign signing for built artifacts
 ```
 
 ## Maintenance

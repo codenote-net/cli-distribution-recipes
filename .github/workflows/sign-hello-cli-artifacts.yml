@@ -66,6 +66,7 @@ jobs:
 
           zip_path=$("$GITHUB_WORKSPACE/recipes/google-drive/build-distribution-zip.sh")
           cp "$zip_path" "$dist_dir/"
+          cp "$GITHUB_WORKSPACE/recipes/google-drive-with-cosign/VERIFY.md" "$dist_dir/VERIFY.md"
 
           cd "$dist_dir"
           shopt -s nullglob
