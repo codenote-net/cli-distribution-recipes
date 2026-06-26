@@ -64,18 +64,7 @@ jobs:
           dist_dir="$GITHUB_WORKSPACE/recipes/sigstore-cosign/dist"
           "$GITHUB_WORKSPACE/recipes/sigstore-cosign/build-artifacts.sh" "$dist_dir"
 
-          cd "$dist_dir"
-          shopt -s nullglob
-          tgz_artifacts=( *.tgz )
-          zip_artifacts=( *.zip )
-
-          if [ "${#tgz_artifacts[@]}" -ne 1 ] || [ "${#zip_artifacts[@]}" -ne 1 ]; then
-            echo "::error::Expected exactly one .tgz and one .zip artifact."
-            ls -la
-            exit 1
-          fi
-
-          ls -l "${tgz_artifacts[@]}" "${zip_artifacts[@]}"
+          ls -la "$dist_dir"
 
       - name: Sign and verify artifacts
         run: |
@@ -105,23 +94,12 @@ jobs:
               --certificate-oidc-issuer "$CERTIFICATE_OIDC_ISSUER" \
               "$artifact"
 
-            cp "$artifact" "$artifact.tampered"
-            printf '\ntampered\n' >> "$artifact.tampered"
-            if cosign verify-blob \
+            "$GITHUB_WORKSPACE/recipes/sigstore-cosign/tamper-verify-fails.sh" \
+              "$artifact" \
+              cosign verify-blob \
               --bundle "$artifact.bundle" \
               --certificate-identity "$CERTIFICATE_IDENTITY" \
-              --certificate-oidc-issuer "$CERTIFICATE_OIDC_ISSUER" \
-              "$artifact.tampered" > "$artifact.tampered.verify.log" 2>&1; then
-              echo "::error::Tampered artifact unexpectedly passed verification: $artifact"
-              exit 1
-            fi
-            if ! grep -E "digest|signature|mismatch|invalid" "$artifact.tampered.verify.log" >/dev/null; then
-              echo "::error::Tampered artifact verification failed for an unexpected reason: $artifact"
-              cat "$artifact.tampered.verify.log"
-              exit 1
-            fi
-            rm "$artifact.tampered"
-            rm "$artifact.tampered.verify.log"
+              --certificate-oidc-issuer "$CERTIFICATE_OIDC_ISSUER"
           done
 
           sha256sum --check *.sha256

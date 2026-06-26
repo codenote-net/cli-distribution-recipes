@@ -10,8 +10,9 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 DIST_DIR=$1
 
-"$REPO_ROOT/recipes/_shared/build-hello-google-drive-zip.sh" "$DIST_DIR" >/dev/null
-cp "$REPO_ROOT/recipes/google-drive-with-cosign/VERIFY.md" "$DIST_DIR/VERIFY.md"
-rm "$DIST_DIR/INSTALL.md"
+"$REPO_ROOT/recipes/_shared/build-hello-google-drive-zip.sh" \
+  "$DIST_DIR" \
+  --sidecar-doc "$REPO_ROOT/recipes/google-drive-with-cosign/VERIFY.md" \
+  --omit-install-sidecar >/dev/null
 
 printf '%s\n' "$DIST_DIR"
