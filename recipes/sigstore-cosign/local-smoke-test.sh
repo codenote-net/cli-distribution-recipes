@@ -90,11 +90,17 @@ for artifact in ./*.tgz ./*.zip; do
   if run_cosign verify-blob \
     --key cosign.pub \
     --bundle "$artifact.bundle" \
-    "$artifact.tampered" >/dev/null 2>&1; then
+    "$artifact.tampered" > "$artifact.tampered.verify.log" 2>&1; then
     printf 'Tampered artifact unexpectedly passed verification: %s\n' "$artifact" >&2
+    exit 1
+  fi
+  if ! grep -E "digest|signature|mismatch|invalid" "$artifact.tampered.verify.log" >/dev/null; then
+    printf 'Tampered artifact verification failed for an unexpected reason: %s\n' "$artifact" >&2
+    cat "$artifact.tampered.verify.log" >&2
     exit 1
   fi
 
   checksum_verify "$artifact.sha256" >/dev/null
+  rm "$artifact.tampered" "$artifact.tampered.verify.log"
   printf 'ok: %s bundle, checksum, and tamper failure\n' "$artifact"
 done

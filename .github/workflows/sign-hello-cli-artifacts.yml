@@ -82,8 +82,16 @@ jobs:
           set -euo pipefail
 
           cd "$GITHUB_WORKSPACE/recipes/sigstore-cosign/dist"
+          shopt -s nullglob
+          artifacts=( *.tgz *.zip )
 
-          for artifact in *.tgz *.zip; do
+          if [ "${#artifacts[@]}" -ne 2 ]; then
+            echo "::error::Expected exactly two artifacts to sign: one .tgz and one .zip."
+            ls -la
+            exit 1
+          fi
+
+          for artifact in "${artifacts[@]}"; do
             sha256sum "$artifact" > "$artifact.sha256"
 
             cosign sign-blob \
@@ -103,11 +111,17 @@ jobs:
               --bundle "$artifact.bundle" \
               --certificate-identity "$CERTIFICATE_IDENTITY" \
               --certificate-oidc-issuer "$CERTIFICATE_OIDC_ISSUER" \
-              "$artifact.tampered"; then
+              "$artifact.tampered" > "$artifact.tampered.verify.log" 2>&1; then
               echo "::error::Tampered artifact unexpectedly passed verification: $artifact"
               exit 1
             fi
+            if ! grep -E "digest|signature|mismatch|invalid" "$artifact.tampered.verify.log" >/dev/null; then
+              echo "::error::Tampered artifact verification failed for an unexpected reason: $artifact"
+              cat "$artifact.tampered.verify.log"
+              exit 1
+            fi
             rm "$artifact.tampered"
+            rm "$artifact.tampered.verify.log"
           done
 
           sha256sum --check *.sha256
