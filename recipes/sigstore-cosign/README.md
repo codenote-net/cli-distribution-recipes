@@ -69,7 +69,7 @@ flowchart TD
   G --> H["cosign sign-blob creates keyless bundle"]
   H --> I["Verify untouched artifact with pinned identity and issuer"]
   I --> J["Tamper copy and confirm verification fails"]
-  J --> K["Upload artifact, .bundle, and .sha256"]
+  J --> K["Upload artifact, .bundle, .sha256, and VERIFY.md"]
   K --> L["Consumer downloads all files"]
   L --> M["Consumer checks SHA-256"]
   M --> N["Consumer runs cosign verify-blob"]

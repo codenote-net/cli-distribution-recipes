@@ -4,7 +4,7 @@ set -eu
 COSIGN_VERSION="${COSIGN_VERSION:-3.0.6}"
 COSIGN_TOOL="aqua:sigstore/cosign@$COSIGN_VERSION"
 COSIGN_PASSWORD="${COSIGN_PASSWORD:-local-smoke-test}"
-NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE:-/private/tmp/codex-npm-cache}"
+NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE:-${TMPDIR:-/tmp}/codenote-npm-cache}"
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)

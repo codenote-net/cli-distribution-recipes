@@ -38,8 +38,8 @@ Run the signing workflow from `main`:
 The workflow:
 
 1. Builds the base Google Drive zip with `recipes/google-drive/build-distribution-zip.sh`.
-2. Signs the zip with `cosign sign-blob --bundle` using GitHub Actions OIDC.
-3. Generates `codenote-hello-<version>.zip.sha256`.
+2. Generates `codenote-hello-<version>.zip.sha256`.
+3. Signs the zip with `cosign sign-blob --bundle` using GitHub Actions OIDC.
 4. Verifies the untouched zip with the pinned GitHub Actions identity.
 5. Modifies a copy of the zip and confirms verification fails.
 6. Uploads the signed distribution set as a workflow artifact.
