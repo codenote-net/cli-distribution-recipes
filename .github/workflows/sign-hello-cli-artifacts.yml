@@ -1,0 +1,112 @@
+name: Sign hello CLI artifacts with cosign
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: sign-hello-cli-artifacts
+  cancel-in-progress: false
+
+env:
+  CERTIFICATE_IDENTITY: "https://github.com/codenote-net/cli-distribution-recipes/.github/workflows/sign-hello-cli-artifacts.yml@refs/heads/main"
+  CERTIFICATE_OIDC_ISSUER: "https://token.actions.githubusercontent.com"
+
+jobs:
+  sign:
+    name: Build and sign hello CLI artifacts
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Require main ref
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::This workflow signs release artifacts only from refs/heads/main. Current ref: $GITHUB_REF"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+
+      - name: Check documented certificate identity
+        run: recipes/sigstore-cosign/check-certificate-identity.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install required npm CLI
+        run: npm install -g npm@11.15.0
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: packages/hello-cli
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
+        with:
+          cosign-release: "v3.0.6"
+
+      - name: Build artifacts
+        run: |
+          set -euo pipefail
+
+          dist_dir="$GITHUB_WORKSPACE/recipes/sigstore-cosign/dist"
+          "$GITHUB_WORKSPACE/recipes/sigstore-cosign/build-artifacts.sh" "$dist_dir"
+
+          ls -la "$dist_dir"
+
+      - name: Sign and verify artifacts
+        run: |
+          set -euo pipefail
+
+          cd "$GITHUB_WORKSPACE/recipes/sigstore-cosign/dist"
+          shopt -s nullglob
+          artifacts=( *.tgz *.zip )
+
+          if [ "${#artifacts[@]}" -ne 2 ]; then
+            echo "::error::Expected exactly two artifacts to sign: one .tgz and one .zip."
+            ls -la
+            exit 1
+          fi
+
+          for artifact in "${artifacts[@]}"; do
+            sha256sum "$artifact" > "$artifact.sha256"
+
+            cosign sign-blob \
+              --yes \
+              --bundle "$artifact.bundle" \
+              "$artifact"
+
+            cosign verify-blob \
+              --bundle "$artifact.bundle" \
+              --certificate-identity "$CERTIFICATE_IDENTITY" \
+              --certificate-oidc-issuer "$CERTIFICATE_OIDC_ISSUER" \
+              "$artifact"
+
+            "$GITHUB_WORKSPACE/recipes/sigstore-cosign/tamper-verify-fails.sh" \
+              "$artifact" \
+              cosign verify-blob \
+              --bundle "$artifact.bundle" \
+              --certificate-identity "$CERTIFICATE_IDENTITY" \
+              --certificate-oidc-issuer "$CERTIFICATE_OIDC_ISSUER"
+          done
+
+          sha256sum --check *.sha256
+
+      - name: Upload signed artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: signed-hello-cli-artifacts
+          path: recipes/sigstore-cosign/dist/
+          if-no-files-found: error
