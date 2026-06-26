@@ -38,7 +38,7 @@ The workflow:
 1. Checks out the repository.
 2. Installs Node.js, npm, and cosign.
 3. Builds the npm `.tgz` with `npm pack`.
-4. Builds the Google Drive `.zip` with `recipes/google-drive/build-distribution-zip.sh`.
+4. Builds the Google Drive `.zip` from that same `.tgz`.
 5. Writes one SHA-256 checksum file per artifact.
 6. Runs `cosign sign-blob --bundle` for each artifact.
 7. Verifies the untouched artifacts with the pinned GitHub Actions identity and issuer.
@@ -86,7 +86,7 @@ Run this before opening a PR when you want local coverage for the parts that do 
 recipes/sigstore-cosign/local-smoke-test.sh
 ```
 
-The script uses `mise` to run `aqua:sigstore/cosign@3.0.6`. It creates a temporary local key pair, builds the npm tarball and Google Drive zip, signs both artifacts with `cosign sign-blob --bundle`, verifies both bundles, confirms tampered copies fail verification, and checks SHA-256 files.
+The script uses `mise` to run `aqua:sigstore/cosign@3.0.6`. It creates a temporary local key pair, builds the npm tarball and Google Drive zip in a temporary directory, signs both artifacts with `cosign sign-blob --bundle`, verifies both bundles, confirms tampered copies fail verification, and checks SHA-256 files.
 
 This is only a local cosign smoke test. It does not prove the GitHub Actions keyless certificate identity, because that identity is issued only inside the signing workflow.
 

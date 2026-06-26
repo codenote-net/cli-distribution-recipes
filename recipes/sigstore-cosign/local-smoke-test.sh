@@ -8,8 +8,6 @@ NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE:-${TMPDIR:-/tmp}/codenote-npm-cache}"
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
-PACKAGE_DIR="$REPO_ROOT/packages/hello-cli"
-GOOGLE_DRIVE_RECIPE_DIR="$REPO_ROOT/recipes/google-drive"
 WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/codenote-cosign-smoke.XXXXXX")
 
 cleanup() {
@@ -29,11 +27,30 @@ if ! command -v mise >/dev/null 2>&1; then
   exit 1
 fi
 
-NPM_CONFIG_CACHE="$NPM_CONFIG_CACHE" npm pack "$PACKAGE_DIR" --pack-destination "$WORK_DIR" >/dev/null
+if command -v shasum >/dev/null 2>&1; then
+  checksum_create() {
+    shasum -a 256 "$1" > "$1.sha256"
+  }
 
-ZIP_PATH=$(NPM_CONFIG_CACHE="$NPM_CONFIG_CACHE" "$GOOGLE_DRIVE_RECIPE_DIR/build-distribution-zip.sh")
-cp "$ZIP_PATH" "$WORK_DIR/"
+  checksum_verify() {
+    shasum -a 256 -c "$1"
+  }
+elif command -v sha256sum >/dev/null 2>&1; then
+  checksum_create() {
+    sha256sum "$1" > "$1.sha256"
+  }
 
+  checksum_verify() {
+    sha256sum --check "$1"
+  }
+else
+  printf 'shasum or sha256sum is required for this smoke test.\n' >&2
+  exit 1
+fi
+
+"$REPO_ROOT/recipes/sigstore-cosign/check-certificate-identity.sh" >/dev/null
+
+NPM_CONFIG_CACHE="$NPM_CONFIG_CACHE" "$REPO_ROOT/recipes/sigstore-cosign/build-artifacts.sh" "$WORK_DIR" >/dev/null
 cd "$WORK_DIR"
 
 artifact_count=$(find . -maxdepth 1 \( -name '*.tgz' -o -name '*.zip' \) -type f | wc -l | tr -d ' ')
@@ -53,7 +70,7 @@ for artifact in ./*.tgz ./*.zip; do
 
   artifact=${artifact#./}
 
-  shasum -a 256 "$artifact" > "$artifact.sha256"
+  checksum_create "$artifact"
 
   COSIGN_PASSWORD="$COSIGN_PASSWORD" run_cosign sign-blob \
     --yes \
@@ -77,6 +94,6 @@ for artifact in ./*.tgz ./*.zip; do
     exit 1
   fi
 
-  shasum -a 256 -c "$artifact.sha256" >/dev/null
+  checksum_verify "$artifact.sha256" >/dev/null
   printf 'ok: %s bundle, checksum, and tamper failure\n' "$artifact"
 done

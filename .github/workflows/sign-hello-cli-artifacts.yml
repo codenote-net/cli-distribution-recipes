@@ -36,6 +36,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
+      - name: Check documented certificate identity
+        run: recipes/sigstore-cosign/check-certificate-identity.sh
+
       - name: Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
@@ -59,14 +62,7 @@ jobs:
           set -euo pipefail
 
           dist_dir="$GITHUB_WORKSPACE/recipes/sigstore-cosign/dist"
-          rm -rf "$dist_dir"
-          mkdir -p "$dist_dir"
-
-          npm pack "$GITHUB_WORKSPACE/packages/hello-cli" --pack-destination "$dist_dir"
-
-          zip_path=$("$GITHUB_WORKSPACE/recipes/google-drive/build-distribution-zip.sh")
-          cp "$zip_path" "$dist_dir/"
-          cp "$GITHUB_WORKSPACE/recipes/google-drive-with-cosign/VERIFY.md" "$dist_dir/VERIFY.md"
+          "$GITHUB_WORKSPACE/recipes/sigstore-cosign/build-artifacts.sh" "$dist_dir"
 
           cd "$dist_dir"
           shopt -s nullglob
@@ -86,16 +82,8 @@ jobs:
           set -euo pipefail
 
           cd "$GITHUB_WORKSPACE/recipes/sigstore-cosign/dist"
-          shopt -s nullglob
-          artifacts=( *.tgz *.zip )
 
-          if [ "${#artifacts[@]}" -ne 2 ]; then
-            echo "::error::Expected exactly two artifacts to sign: one .tgz and one .zip."
-            ls -la
-            exit 1
-          fi
-
-          for artifact in "${artifacts[@]}"; do
+          for artifact in *.tgz *.zip; do
             sha256sum "$artifact" > "$artifact.sha256"
 
             cosign sign-blob \
